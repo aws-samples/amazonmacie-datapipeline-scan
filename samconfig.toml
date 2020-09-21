@@ -1,0 +1,12 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "maciepipelinescan"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-lwceqdj0k37v"
+s3_prefix = "maciepipelinescan"
+region = "us-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "StepFunctionName=\"MaciePipelineScanStateMachine\" BucketNamePrefix=\"005016361080\" ApprovalEmailDestination=\"brandon.m.wu@gmail.com\""
+

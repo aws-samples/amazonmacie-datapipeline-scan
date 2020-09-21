@@ -1,0 +1,157 @@
+{
+  "Comment": "Sensitive data discovery scan in data pipeline",
+  "StartAt": "triggerMacieScan",
+  "States": {
+    "triggerMacieScan": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${TriggerMacieScan}",
+        "Payload": {
+          "Input.$": "$"
+        }
+      },
+      "ResultPath": "$.jobId",
+      "Next": "checkMacieStatus"
+    },
+    "checkMacieStatus": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${CheckMacieStatus}",
+        "Payload": {
+          "Input.$": "$"
+        }
+      },
+      "ResultPath": "$.jobStatus",
+      "Next": "isMacieStatusCompleteChoice"
+    },
+    "isMacieStatusCompleteChoice": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.jobStatus.Payload",
+          "StringEquals": "COMPLETE",
+          "Next": "getMacieFindingsCount"
+        },
+        {
+          "Or": [
+            {
+              "Variable": "$.jobStatus.Payload",
+              "StringEquals": "RUNNING"
+            },
+            {
+              "Variable": "$.jobStatus.Payload",
+              "StringEquals": "IDLE"
+            },
+            {
+              "Variable": "$.jobStatus.Payload",
+              "StringEquals": "PAUSED"
+            }
+          ],
+          "Next": "waitOneMinute"
+        },
+        {
+          "Variable": "$.jobStatus.Payload",
+          "IsNull": true,
+          "Next": "noNewKeysInRawBucket"
+        }
+      ],
+      "Default": "triggerMacieScan"
+    },
+    "noNewKeysInRawBucket": {
+      "Type": "Succeed"
+    },
+    "waitOneMinute": {
+      "Type": "Wait",
+      "Seconds": 60,
+      "Next": "checkMacieStatus"
+    },
+    "getMacieFindingsCount": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${GetMacieFindingsCount}",
+        "Payload": {
+          "Input.$": "$"
+        }
+      },
+      "ResultPath": "$.macieFindingsInfo",
+      "Next": "isSensitiveDataFoundChoice"
+    },
+    "isSensitiveDataFoundChoice": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.macieFindingsInfo.Payload",
+          "IsNull": true,
+          "Next": "moveAllScanStageS3Files"
+        }
+      ],
+      "Default": "triggerManualApproval"
+    },
+    "moveAllScanStageS3Files": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${MoveAllScanStageS3Files}",
+        "Payload": {
+          "Input.$": "$"
+        }
+      },
+      "End": true
+    },
+    "triggerManualApproval": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+      "Parameters": {
+        "FunctionName": "${TriggerManualApproval}",
+        "Payload": {
+          "Input.$": "$",
+          "token.$": "$$.Task.Token"
+        }
+      },
+      "ResultPath": "$.taskresult",
+      "TimeoutSeconds": 432000,
+      "Next": "manualApprovalChoice"
+    },
+    "manualApprovalChoice": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.taskresult.action",
+          "StringEquals": "delete",
+          "Next": "deleteManualReviewS3Files"
+        },
+        {
+          "Variable": "$.taskresult.action",
+          "StringEquals": "allow",
+          "Next": "moveToScannedDataS3Files"
+        }
+      ],
+      "Default": "deleteManualReviewS3Files"
+    },
+    "moveToScannedDataS3Files": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${MoveToScannedDataS3Files}",
+        "Payload": {
+          "Input.$": "$"
+        }
+      },
+      "End": true
+    },
+        "deleteManualReviewS3Files": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${DeleteManualReviewS3Files}",
+        "Payload": {
+          "Input.$": "$"
+        }
+      },
+      "End": true
+    }
+  }
+}
