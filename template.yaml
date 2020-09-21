@@ -1,0 +1,449 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this
+# software and associated documentation files (the "Software"), to deal in the Software
+# without restriction, including without limitation the rights to use, copy, modify,
+# merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ 
+
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Macie Data Pipeline Scan
+
+  SAM Template to create a serverless application that will trigger a Macie
+  sensitive data discovery job upon upload of an object to an S3 bucket. The
+  application is intended to be integrated into a data ingestion pipeline for 
+  a serverless data lake or analytics workflow.  
+
+Parameters:
+  StepFunctionName:
+    Type: String
+    Default: "maciepipelinescanstatemachine"
+    Description: "Enter name for Macie Pipeline Scan Step Function."
+
+  BucketNamePrefix:
+    Type: String
+    Default: ""
+    Description: "Enter unique prefix for Amazon S3 buckets."
+  
+  ApprovalEmailDestination:
+    Type: String
+    Default: ""
+    Description: >
+      Enter email address to receive approval requests. Check your email after 
+      deployment to approve email delivery for this notification.
+
+  MacieAlreadyEnabled:
+    Type: String
+    Default: 'no'
+    AllowedValues: ["yes", "no"]
+    Description: >
+      Do you already have Amazon Macie enabled for your account/region 
+      [yes/no]?
+
+      If no, this template will enable Amazon Macie in your account/region 
+      as required for this proof of concept to function.
+
+Conditions:
+  CreateMacieSession: !Equals [!Ref MacieAlreadyEnabled, 'no']
+
+Resources:
+  # Macie Def
+  MacieSession:
+    Type: AWS::Macie::Session
+    Condition: CreateMacieSession
+    Properties:
+      Status: "ENABLED"
+
+  # IAM Policies Def
+  MacieScanPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: 
+              - 'macie2:CreateClassificationJob'
+              - 'macie2:TagResource'
+            Resource: '*'
+
+  MacieStatusPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: 
+              - 'macie2:ListFindings'
+              - 'macie2:ListClassificationJobs'
+              - 'macie2:DescribeClassificationJob'
+              - 'macie2:GetFindings'
+            Resource: '*'
+
+  S3DeleteRawObjectsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: 
+              - 's3:DeleteObject'
+            Resource: 
+              - !Join
+                - "/*"
+                - - !GetAtt DataPipelineRawBucket.Arn
+                  - ""
+
+  S3DeleteScanStageObjectsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: 
+              - 's3:DeleteObject'
+            Resource: 
+              - !Join
+                - "/*"
+                - - !GetAtt DataPipelineScanStageBucket.Arn
+                  - ""
+
+  S3DeleteManualReviewObjectsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: 
+              - 's3:DeleteObject'
+            Resource: 
+              - !Join
+                - "/*"
+                - - !GetAtt DataPipelineManualReviewBucket.Arn
+                  - ""
+
+  S3TagWriteObjectsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: 
+              - 's3:PutObjectTagging'
+              - 's3:GetObjectTagging'
+            Resource: 
+              - !Join
+                - "/*"
+                - - !GetAtt DataPipelineScanStageBucket.Arn
+                  - ""
+              - !GetAtt DataPipelineScanStageBucket.Arn
+              - !Join
+                - "/*"
+                - - !GetAtt DataPipelineScannedDataBucket.Arn
+                  - ""
+              - !GetAtt DataPipelineScannedDataBucket.Arn
+              - !Join
+                - "/*"
+                - - !GetAtt DataPipelineManualReviewBucket.Arn
+                  - ""
+              - !GetAtt DataPipelineManualReviewBucket.Arn
+          - Effect: Allow
+            Action: 
+              - 's3:PutObject'
+            Resource: 
+              - !Join
+                - "/*"
+                - - !GetAtt DataPipelineManualReviewBucket.Arn
+                  - ""
+              - !GetAtt DataPipelineManualReviewBucket.Arn
+              - !Join
+                - "/*"
+                - - !GetAtt DataPipelineScannedDataBucket.Arn
+                  - ""
+              - !GetAtt DataPipelineScannedDataBucket.Arn
+
+  StateMachineSendTaskPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'states:SendTaskSuccess'
+              - 'states:SendTaskFailure'
+            Resource: !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:\
+                stateMachine:${StepFunctionName}"
+
+
+  # S3 Buckets Def
+  DataPipelineRawBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${BucketNamePrefix}-data-pipeline-raw"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  DataPipelineScanStageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${BucketNamePrefix}-data-pipeline-scan-stage"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  DataPipelineManualReviewBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${BucketNamePrefix}-data-pipeline-manual-review"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  DataPipelineScannedDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${BucketNamePrefix}-data-pipeline-scanned-data"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  # SNS Topic Def
+  SNSApprovalTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: 'Notification Topic for Approval Requests'
+      TopicName: ApprovalRequestNotification
+      Subscription:
+        - Endpoint: !Sub ${ApprovalEmailDestination}
+          Protocol: 'email'
+
+  # Lambda Function Defs
+  TriggerMacieScan:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/trigger_macie_scan/
+      Environment:
+        Variables:
+          rawS3Bucket: !Ref DataPipelineRawBucket
+          scanS3Bucket: !Ref DataPipelineScanStageBucket
+          accountId: !Ref "AWS::AccountId"
+      Handler: triggerMacieScan.lambda_handler
+      Policies:
+        - !Ref MacieScanPolicy
+        - !Ref S3DeleteRawObjectsPolicy
+        - S3ReadPolicy:
+            BucketName:
+              !Ref DataPipelineRawBucket
+        - S3WritePolicy:
+            BucketName:
+              !Ref DataPipelineScanStageBucket
+      Runtime: python3.6
+      Timeout: 10
+
+  CheckMacieStatus:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: functions/check_macie_status/
+      Handler: checkMacieStatus.lambda_handler
+      Policies:
+        - !Ref MacieStatusPolicy
+      Runtime: python3.6
+      Timeout: 10
+
+  DeleteManualReviewS3Files:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/delete_manual_review_s3_files/
+      Environment:
+        Variables:
+          sourceS3Bucket: !Ref DataPipelineManualReviewBucket
+      Handler: deleteManualReviewS3Files.lambda_handler
+      Policies:
+        - !Ref S3DeleteManualReviewObjectsPolicy
+      Runtime: python3.6
+      Timeout: 10
+
+  GetMacieFindingsCount:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/get_macie_findings_count/
+      Handler: getMacieFindingsCount.lambda_handler
+      Policies:
+        - !Ref MacieStatusPolicy
+        - S3ReadPolicy:
+            BucketName:
+              !Ref DataPipelineScanStageBucket
+        - S3WritePolicy:
+            BucketName:
+              !Ref DataPipelineScannedDataBucket
+        - S3WritePolicy:
+            BucketName:
+              !Ref DataPipelineManualReviewBucket
+      Runtime: python3.6
+      Timeout: 10
+
+  MoveAllScanStageS3Files:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/move_all_scan_stage_s3_files/
+      Environment:
+        Variables:
+          sourceS3Bucket: !Ref DataPipelineScanStageBucket
+          targetS3Bucket: !Ref DataPipelineScannedDataBucket
+      Handler: moveAllScanStageS3Files.lambda_handler
+      Policies:
+        - S3ReadPolicy:
+            BucketName:
+              !Ref DataPipelineScanStageBucket
+        - S3WritePolicy:
+            BucketName:
+              !Ref DataPipelineScannedDataBucket
+        - !Ref S3DeleteScanStageObjectsPolicy
+      Runtime: python3.6
+      Timeout: 10
+
+  MoveToScannedDataS3Files:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/move_to_scanned_data_s3_files/
+      Environment:
+        Variables:
+          sourceS3Bucket: !Ref DataPipelineManualReviewBucket
+          targetS3Bucket: !Ref DataPipelineScannedDataBucket
+      Handler: moveToScannedDataS3Files.lambda_handler
+      Policies:
+        - S3ReadPolicy:
+            BucketName:
+              !Ref DataPipelineManualReviewBucket
+        - !Ref S3TagWriteObjectsPolicy
+        - !Ref S3DeleteManualReviewObjectsPolicy
+      Runtime: python3.6
+      Timeout: 10
+
+  ReceiveApprovalDecisionAPI:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/receive_approval_decision_api/
+      Handler: receiveApprovalDecisionAPI.lambda_handler
+      Policies:
+        - !Ref StateMachineSendTaskPolicy
+      Runtime: python3.6
+      Events:
+        ApiEventAllow:
+          Type: Api
+          Properties:
+            Path: /allow
+            Method: get
+        APIEventDeny:
+          Type: Api
+          Properties:
+            Path: /deny
+            Method: get
+      Timeout: 10
+
+  TriggerManualApproval:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/trigger_manual_approval/
+      Environment:
+        Variables:
+          apiAllowEndpoint: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/allow"
+          apiDenyEndpoint: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/deny"
+          snsTopicArn: !Ref SNSApprovalTopic
+          sourceS3Bucket: !Ref DataPipelineScanStageBucket
+          targetS3Bucket: !Ref DataPipelineManualReviewBucket
+          targetScannedS3Bucket: !Ref DataPipelineScannedDataBucket
+      Handler: triggerManualApproval.lambda_handler
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName:
+              !GetAtt SNSApprovalTopic.TopicName
+        - S3ReadPolicy:
+            BucketName:
+              !Ref DataPipelineScanStageBucket
+        - !Ref S3DeleteScanStageObjectsPolicy
+        - !Ref S3TagWriteObjectsPolicy
+      Runtime: python3.6
+      Timeout: 10
+
+  #Step Function Defs
+  MaciePipelineScanStateMachine:
+    Type: AWS::Serverless::StateMachine 
+    Properties:
+      Name: !Sub ${StepFunctionName}
+      DefinitionUri: statemachine/macie_pipeline_scan.asl.json
+      DefinitionSubstitutions:
+        CheckMacieStatus: !GetAtt CheckMacieStatus.Arn
+        DeleteManualReviewS3Files: !GetAtt DeleteManualReviewS3Files.Arn
+        GetMacieFindingsCount: !GetAtt GetMacieFindingsCount.Arn
+        MoveAllScanStageS3Files: !GetAtt MoveAllScanStageS3Files.Arn
+        MoveToScannedDataS3Files: !GetAtt MoveToScannedDataS3Files.Arn
+        ReceiveApprovalDecisionAPI: !GetAtt ReceiveApprovalDecisionAPI.Arn
+        TriggerMacieScan: !GetAtt TriggerMacieScan.Arn
+        TriggerManualApproval: !GetAtt TriggerManualApproval.Arn
+      Events:
+        CWScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: 'rate(60 minutes)'
+            Name: AmazonMaciePipelineScan
+            Description: >
+              Scheduled scan job for Amazon Macie discovery scan for data 
+              pipeline
+            Enabled: true
+
+      Policies: 
+        - LambdaInvokePolicy:
+            FunctionName: !Ref CheckMacieStatus
+        - LambdaInvokePolicy:
+            FunctionName: !Ref DeleteManualReviewS3Files
+        - LambdaInvokePolicy:
+            FunctionName: !Ref GetMacieFindingsCount
+        - LambdaInvokePolicy:
+            FunctionName: !Ref MoveAllScanStageS3Files
+        - LambdaInvokePolicy:
+            FunctionName: !Ref MoveToScannedDataS3Files
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ReceiveApprovalDecisionAPI
+        - LambdaInvokePolicy:
+            FunctionName: !Ref TriggerMacieScan
+        - LambdaInvokePolicy:
+            FunctionName: !Ref TriggerManualApproval
+        - CloudWatchPutMetricPolicy: {}
+        - AWSXrayWriteOnlyAccess
+
+Outputs:
+  MaciePipelineScanStateMachineArn:
+    Description: "Macie Scan Step Function ARN"
+    Value: !Ref MaciePipelineScanStateMachine
+  
+  DataPipelineRawBucketName:
+    Description: "Data pipeline raw bucket name to trigger Macie scan"
+    Value: !Ref DataPipelineRawBucket
+
+  DataPipelineScannedDataBucketName:
+    Description: "Data pipeline bucket post Macie scan"
+    Value: !Ref DataPipelineScannedDataBucket
+
