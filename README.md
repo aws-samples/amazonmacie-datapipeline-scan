@@ -25,7 +25,7 @@ The following resources are created as part of the solution:
 * [Amazon Simple Notification Service (SNS) Topic](https://docs.aws.amazon.com/sns/latest/dg/sns-tutorial-create-topic.html) to send notification to review sensitive data discovered in the pipeline
 * [Amazon API Gateway REST API with two resources](https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-create-api.html) to receive the decision of the sensitive data reviewer as part of a manual workflow
 
-*Important:* the application uses various AWS services, and there are costs associated with these resources after the Free Tier usage. Please see the [AWS pricing page](https://aws.amazon.com/pricing/) for details.
+**Important:** the application uses various AWS services, and there are costs associated with these resources after the Free Tier usage. Please see the [AWS pricing page](https://aws.amazon.com/pricing/) for details.
 
 The solution architecture is shown below.
 ![Architecture Diagram](https://github.com/aws-samples/amazonmacie-datapipeline-scan/blob/master/Macie%20Data%20Pipeline.png)
