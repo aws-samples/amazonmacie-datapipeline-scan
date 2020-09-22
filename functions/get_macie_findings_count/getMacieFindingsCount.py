@@ -25,9 +25,7 @@ import os
 from botocore.exceptions import ClientError
 
 '''
-Get number of findings from Macie classification job. Tag all objects
-and move to the manual review S3 bucket if sensitive data found.
-Move files to the scanned data S3 bucket if no sensitive data found. 
+Get number of findings from Macie classification job. 
 
 This proof of concept is used as part of a data pipeline workflow as part of
 the data ingestion pipeline. 

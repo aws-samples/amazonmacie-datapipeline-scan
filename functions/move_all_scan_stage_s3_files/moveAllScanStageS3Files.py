@@ -36,6 +36,8 @@ def lambda_handler(event, context):
     src_bucket_name = os.environ['sourceS3Bucket']
 
     s3_client = boto3.client('s3')
+    
+    prefix = event['Input']['id']
 
     try:
         print('Moving files without sensitive data')
@@ -50,20 +52,32 @@ def lambda_handler(event, context):
                 s3_keys_remaining = []
                 
             for s3_key_info in s3_keys_remaining:
-                print(f"Moving: {s3_key_info['Key']}")
-                response = s3_client.copy_object(
-                    Bucket = target_bucket_name,
-                    CopySource = {
-                        'Bucket': src_bucket_name,
-                        'Key': s3_key_info['Key']
-                    },
-                    Key = s3_key_info['Key']
-                )
-                print('Deleting object')
-                response = s3_client.delete_object(
+                print(f"Checking for tag on: {s3_key_info['Key']}")
+                object_tags = s3_client.get_object_tagging(
                     Bucket=src_bucket_name,
-                    Key = s3_key_info['Key']
+                    Key=s3_key_info['Key']
                 )
+                for tag_set in object_tags['TagSet']:
+                    if tag_set['Key'] == 'WorkflowId':
+                        check_key = tag_set['Value']
+                if check_key == prefix:
+                    print(f"Moving: {s3_key_info['Key']}")
+                    response = s3_client.copy_object(
+                        Bucket = target_bucket_name,
+                        CopySource = {
+                            'Bucket': src_bucket_name,
+                            'Key': s3_key_info['Key']
+                        },
+                        Key = s3_key_info['Key']
+                    )
+                    print('Deleting object')
+                    response = s3_client.delete_object(
+                        Bucket=src_bucket_name,
+                        Key = s3_key_info['Key']
+                    )
+                else:
+                    print(f"Object tag not matching for {s3_key_info['Key']}")
+                    
     except Exception as e:
         print(f'Could not complete S3 object move')
         print(e)

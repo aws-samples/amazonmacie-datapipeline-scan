@@ -22,8 +22,8 @@ import os
 from botocore.exceptions import ClientError
 
 '''
-Perform a sensitive data discovery scan using Amazon Macie upon upload of
-a file to Amazon Simple Storage Service (S3). 
+Perform a sensitive data discovery scan using Amazon Macie based on scheduled
+execution of Amazon EventBridge event. 
 
 This proof of concept is used as part of a data pipeline workflow as part of
 the data ingestion pipeline. 
@@ -41,6 +41,8 @@ def lambda_handler(event, context):
     upload_bucket_name = os.environ['rawS3Bucket']
     scan_bucket_name = os.environ['scanS3Bucket']
 
+    prefix = event['Input']['id']
+
     date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S%Z")
 
     keys_found = False
@@ -55,6 +57,8 @@ def lambda_handler(event, context):
             # Move objects to scan bucket
             for key_data in page['Contents']:
                 keys_found = True
+
+                print(f"Moving object: {key_data['Key']}")
                 response = s3_client.copy_object(
                     Bucket = scan_bucket_name,
                     CopySource = {
@@ -63,10 +67,25 @@ def lambda_handler(event, context):
                     },
                     Key = key_data['Key']
                 )
+
                 print('Deleting object')
                 response = s3_client.delete_object(
                     Bucket=upload_bucket_name,
                     Key = key_data['Key']
+                )
+
+                print(f"Tag object post move: {key_data['Key']}")
+                response = s3_client.put_object_tagging(
+                    Bucket = scan_bucket_name,
+                    Key = key_data['Key'],
+                    Tagging = {
+                        'TagSet': [
+                            {
+                                'Key': 'WorkflowId',
+                                'Value': prefix
+                            }
+                        ]
+                    }
                 )
     except Exception as e:
         print('Could not retrieve S3 contents')

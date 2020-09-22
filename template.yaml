@@ -137,7 +137,7 @@ Resources:
                 - - !GetAtt DataPipelineManualReviewBucket.Arn
                   - ""
 
-  S3TagWriteObjectsPolicy:
+  S3TagObjectsPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       PolicyDocument:
@@ -163,6 +163,13 @@ Resources:
                 - - !GetAtt DataPipelineManualReviewBucket.Arn
                   - ""
               - !GetAtt DataPipelineManualReviewBucket.Arn
+  
+  S3WriteObjectsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
           - Effect: Allow
             Action: 
               - 's3:PutObject'
@@ -253,6 +260,7 @@ Resources:
       Policies:
         - !Ref MacieScanPolicy
         - !Ref S3DeleteRawObjectsPolicy
+        - !Ref S3TagObjectsPolicy
         - S3ReadPolicy:
             BucketName:
               !Ref DataPipelineRawBucket
@@ -321,6 +329,8 @@ Resources:
             BucketName:
               !Ref DataPipelineScannedDataBucket
         - !Ref S3DeleteScanStageObjectsPolicy
+        - !Ref S3TagObjectsPolicy
+        - !Ref S3WriteObjectsPolicy
       Runtime: python3.6
       Timeout: 10
 
@@ -337,7 +347,8 @@ Resources:
         - S3ReadPolicy:
             BucketName:
               !Ref DataPipelineManualReviewBucket
-        - !Ref S3TagWriteObjectsPolicy
+        - !Ref S3TagObjectsPolicy
+        - !Ref S3WriteObjectsPolicy
         - !Ref S3DeleteManualReviewObjectsPolicy
       Runtime: python3.6
       Timeout: 10
@@ -384,7 +395,8 @@ Resources:
             BucketName:
               !Ref DataPipelineScanStageBucket
         - !Ref S3DeleteScanStageObjectsPolicy
-        - !Ref S3TagWriteObjectsPolicy
+        - !Ref S3TagObjectsPolicy
+        - !Ref S3WriteObjectsPolicy
       Runtime: python3.6
       Timeout: 10
 
