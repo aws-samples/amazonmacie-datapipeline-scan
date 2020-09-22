@@ -407,7 +407,7 @@ Resources:
         CWScheduledEvent:
           Type: Schedule
           Properties:
-            Schedule: 'rate(60 minutes)'
+            Schedule: 'rate(6 hours)'
             Name: AmazonMaciePipelineScan
             Description: >
               Scheduled scan job for Amazon Macie discovery scan for data 
