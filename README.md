@@ -32,7 +32,7 @@ The solution architecture is shown below.
 
 ### Solution logic
 
-1. Objects are uploaded to raw data Amazon S3 bucket as part of data ingestion process.
+1. Objects are uploaded to *raw data* Amazon S3 bucket as part of data ingestion process.
 2. Scheduled Amazon EventBridge rule executes the Sensitive Data Scan AWS Step Function workflow.
 3. *triggerMacieScan* AWS Lambda function moves objects from the *raw data* Amazon S3 bucket to the *scan stage* Amazon S3 bucket.
 4. *triggerMacieScan* AWS Lambda function creates an Amazon Macie sensitive data discovery job on the *scan stage* Amazon S3 bucket.
