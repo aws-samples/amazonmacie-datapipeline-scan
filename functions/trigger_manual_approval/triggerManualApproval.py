@@ -59,6 +59,10 @@ def lambda_handler(event, context):
                         {
                             'Key': 'SensitiveDataFound',
                             'Value': 'true'
+                        },
+                        {
+                            'Key': 'WorkflowId',
+                            'Value': prefix
                         }
                     ]
                 }
