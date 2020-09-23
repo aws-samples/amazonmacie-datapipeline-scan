@@ -44,8 +44,8 @@ The solution architecture is shown below.
 8. *isSensitiveDataFound* AWS Step Function Choice Rule checks whether sensitive data was found in the Amazon Macie sensitive data discovery job.
     1. If there was sensitive data discovered, execute the *triggerManualApproval* AWS Lambda function.
     2. If there was no sensitive data discovered, execute the *moveAllScanStageS3Files* AWS Lambda function.
-9. *moveAllScanStageS3Files* AWS Lambda function moves all of the objects from the scan stage Amazon S3 bucket to the data scanned Amazon S3 bucket.
-10. *triggerManualApproval* AWS Lambda function tags and moves objects them with sensitive data discovered to the manual review Amazon S3 bucket, and moves objects with no sensitive data discovered to the data scanned Amazon S3 bucket. The function then sends a notification to the *ApprovalRequestNotification* Amazon SNS Topic as a notification that manual review is required.
+9. *moveAllScanStageS3Files* AWS Lambda function moves all of the objects from the scan stage Amazon S3 bucket to the *scanned data* Amazon S3 bucket.
+10. *triggerManualApproval* AWS Lambda function tags and moves objects them with sensitive data discovered to the manual review Amazon S3 bucket, and moves objects with no sensitive data discovered to the *scanned data* Amazon S3 bucket. The function then sends a notification to the *ApprovalRequestNotification* Amazon SNS Topic as a notification that manual review is required.
 11. Email is sent to the email subscribed to the *ApprovalRequestNotification* Amazon SNS Topic (from the solution deployment template) for the manual review user with the option to ‘Approve’ or ‘Deny’ pipeline ingestion for these objects.
 12. Manual review user assesses the objects with sensitive data in the *manual review* Amazon S3 bucket and selects the ‘Approve’ or ‘Deny’ links in the email.
 13. The decision decision request is proxied from the Amazon API Gateway to the *receiveApprovalDecision* AWS Lambda function.
@@ -53,8 +53,8 @@ The solution architecture is shown below.
     1. If denied, execute the *deleteManualReviewS3Files* AWS Lambda function.
     2. If approved, execute the *moveToScannedDataS3Files* AWS Lambda function.
 15. *deleteManualReviewS3Files* AWS Lambda function deletes the objects from the *manual review* Amazon S3 bucket.
-16. *moveToScannedDataS3Files* AWS Lambda function moves the objects from the *manual review* Amazon S3 bucket to the *data scanned* Amazon S3 bucket.
-17. The next step of the automated data pipeline will begin with the objects in the *data scanned* Amazon S3 bucket
+16. *moveToScannedDataS3Files* AWS Lambda function moves the objects from the *manual review* Amazon S3 bucket to the *scanned data* Amazon S3 bucket.
+17. The next step of the automated data pipeline will begin with the objects in the *scanned data* Amazon S3 bucket
 
 
 ## Security
