@@ -38,6 +38,7 @@ def lambda_handler(event, context):
     s3_client = boto3.client('s3')
     
     prefix = event['Input']['id']
+    check_key = ''
 
     try:
         print('Moving files without sensitive data')
@@ -77,7 +78,7 @@ def lambda_handler(event, context):
                     )
                 else:
                     print(f"Object tag not matching for {s3_key_info['Key']}")
-                    
+
     except Exception as e:
         print(f'Could not complete S3 object move')
         print(e)

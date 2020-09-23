@@ -42,6 +42,7 @@ def lambda_handler(event, context):
 
     prefix = event['Input']['id']
     s3_key_names = event['Input']['macieFindingsInfo']['Payload']
+    check_key = ''
     
     sns_client = boto3.client('sns')
     s3_client = boto3.client('s3')
