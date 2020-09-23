@@ -76,6 +76,7 @@ def lambda_handler(event, context):
                         Bucket=src_bucket_name,
                         Key = s3_key_info['Key']
                     )
+                    check_key = ''
                 else:
                     print(f"Object tag not matching for {s3_key_info['Key']}")
 
