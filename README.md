@@ -28,7 +28,7 @@ The following resources are created as part of the solution:
 **Important:** the application uses various AWS services, and there are costs associated with these resources after the Free Tier usage. Please see the [AWS pricing page](https://aws.amazon.com/pricing/) for details.
 
 The solution architecture is shown below.
-![Architecture Diagram](https://github.com/aws-samples/amazonmacie-datapipeline-scan/blob/master/Macie%20Data%20Pipeline.png)
+![Architecture Diagram](https://github.com/aws-samples/amazonmacie-datapipeline-scan/blob/master/images/macie-data-pipeline.png)
 
 ### Solution logic
 
