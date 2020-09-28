@@ -10,7 +10,7 @@ This helps reduce the risk that sensitive data, such as personally identifiable 
 
 Many of my customers are [building a serverless data lake](https://aws.amazon.com/blogs/big-data/build-and-automate-a-serverless-data-lake-using-an-aws-glue-trigger-for-the-data-catalog-and-etl-jobs/) with [Amazon Simple Storage Service (Amazon S3)](https://aws.amazon.com/s3/) as the primary data store. When building pipelines for their data lakes, customers commonly use several Amazon S3 buckets to represent different stages of their pipeline. I will refer to the Amazon S3 bucket for the first stage of ingestion as the raw data bucket. For example, some customers may create separate raw data, curated data, and processed data buckets. 
 
-This solution will add additional validation steps to the pipeline on the raw data Amazon S3 bucket. However, you can customize this solution to perform the sensitive data discovery scan during any stage of the pipeline. As the majority of customers do their extract, transform, and load (ETL) daily, this solution will perform the sensitive data discovery scan on a scheduled (every 60 minute) basis prior to any crawler jobs for cataloguing the data. 
+This solution will add additional validation steps to the pipeline on the raw data Amazon S3 bucket. However, you can customize this solution to perform the sensitive data discovery scan during any stage of the pipeline. As the majority of customers do their extract, transform, and load (ETL) daily, this solution will perform the sensitive data discovery scan on a scheduled basis (every 6 hours)  prior to any crawler jobs for cataloguing the data. 
 
 ### Solution components
 
