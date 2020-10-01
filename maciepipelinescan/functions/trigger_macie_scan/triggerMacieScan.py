@@ -41,11 +41,16 @@ def lambda_handler(event, context):
     upload_bucket_name = os.environ['rawS3Bucket']
     scan_bucket_name = os.environ['scanS3Bucket']
 
-    prefix = event['Input']['id']
-
     date_time = datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S%Z")
-
     keys_found = False
+
+    try:
+        print('Getting Event id')
+        prefix = event['Input']['id']
+    except Exception as e:
+        print('Could not retrieve Event id')
+        print(e)
+        return  
 
     try:
         # Check if upload bucket contains objects
@@ -105,7 +110,22 @@ def lambda_handler(event, context):
                     'bucketDefinitions': [{
                         'accountId': acct_id, 
                         'buckets': [scan_bucket_name]
-                    }]
+                    }],
+                    'scoping': {
+                        'includes': {
+                            'and': [{
+                                'tagScopeTerm': {
+                                    'comparator': 'EQ',
+                                    'key': 'TAG',
+                                    'tagValues': [{
+                                            'key': 'WorkflowId',
+                                            'value': prefix
+                                    }],
+                                    'target': 'S3_OBJECT'
+                                }
+                            }]
+                        }
+                    }
                 }
             )
     except Exception as e:

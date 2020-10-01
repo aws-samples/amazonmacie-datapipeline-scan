@@ -22,8 +22,7 @@ from botocore.exceptions import ClientError
 
 '''
 Move all files from scan stage bucket to the scanned data bucket. This function 
-is called when there are no sensitive data discovery findings from the Macie
-job.
+is called when a manual approval was received from the manual approval step.
 
 This proof of concept is used as part of a data pipeline workflow as part of
 the data ingestion pipeline. 
