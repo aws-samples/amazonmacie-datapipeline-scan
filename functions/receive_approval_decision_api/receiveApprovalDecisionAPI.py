@@ -26,6 +26,8 @@ This proof of concept is used as part of a data pipeline workflow as part of
 the data ingestion pipeline. 
 '''
 
+step_function_client = boto3.client('stepfunctions')
+
 def lambda_handler(event, context):
     print(f'REQUEST RECEIVED: {json.dumps(event, default=str)}')
     
@@ -40,7 +42,6 @@ def lambda_handler(event, context):
     task_token_clean = "+".join(task_token.split())
     print(f'Task Token: {task_token_clean}')
 
-    step_function_client = boto3.client('stepfunctions')
     try:
         print(f'Sending task success')
         response = step_function_client.send_task_success(

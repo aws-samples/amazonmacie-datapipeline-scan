@@ -31,11 +31,11 @@ This proof of concept is used as part of a data pipeline workflow as part of
 the data ingestion pipeline. 
 '''
 
+macie_client = boto3.client('macie2')
+
 def lambda_handler(event, context):
     print(f'REQUEST RECEIVED: {json.dumps(event, default=str)}')
     
-    macie_client = boto3.client('macie2')
-
     job_id = event['Input']['jobId']['Payload']
     file_keys = set()
     return_info = []

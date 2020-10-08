@@ -30,6 +30,10 @@ This proof of concept is used as part of a data pipeline workflow as part of
 the data ingestion pipeline. 
 '''
 
+sns_client = boto3.client('sns')
+s3_client = boto3.client('s3')
+step_function_client = boto3.client('stepfunctions')
+
 def lambda_handler(event, context):
     print(f'REQUEST RECEIVED: {json.dumps(event, default=str)}')
     
@@ -43,10 +47,6 @@ def lambda_handler(event, context):
     prefix = event['Input']['id']
     s3_key_names = event['Input']['macieFindingsInfo']['Payload']
     check_key = ''
-    
-    sns_client = boto3.client('sns')
-    s3_client = boto3.client('s3')
-    step_function_client = boto3.client('stepfunctions')
 
     try:
         print('Moving files with sensitive data')

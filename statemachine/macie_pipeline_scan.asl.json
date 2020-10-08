@@ -53,7 +53,7 @@
         },
         {
           "Variable": "$.jobStatus.Payload",
-          "IsNull": true,
+          "StringEquals":"NoKeysFound",
           "Next": "noNewKeysInRawBucket"
         }
       ],

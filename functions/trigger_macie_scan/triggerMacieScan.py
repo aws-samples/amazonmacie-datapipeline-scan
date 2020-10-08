@@ -29,13 +29,12 @@ This proof of concept is used as part of a data pipeline workflow as part of
 the data ingestion pipeline. 
 '''
 
+macie_client = boto3.client('macie2')
+s3_client = boto3.client('s3')
+paginator = s3_client.get_paginator('list_objects_v2')
+
 def lambda_handler(event, context):
     print(f'REQUEST RECEIVED: {json.dumps(event, default=str)}')
-
-    macie_client = boto3.client('macie2')
-    s3_client = boto3.client('s3')
-    paginator = s3_client.get_paginator('list_objects_v2')
-
 
     acct_id = os.environ['accountId']
     upload_bucket_name = os.environ['rawS3Bucket']
@@ -134,4 +133,7 @@ def lambda_handler(event, context):
         return
 
     print('Execution complete...')
-    return response['jobId']
+    if keys_found == True:
+        return response['jobId']
+    else:
+        return 'NoKeysFound'

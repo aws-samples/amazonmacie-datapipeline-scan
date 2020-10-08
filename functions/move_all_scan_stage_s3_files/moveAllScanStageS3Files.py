@@ -29,13 +29,13 @@ This proof of concept is used as part of a data pipeline workflow as part of
 the data ingestion pipeline. 
 '''
 
+s3_client = boto3.client('s3')
+    
 def lambda_handler(event, context):
     print(f'REQUEST RECEIVED: {json.dumps(event, default=str)}')
 
     target_bucket_name = os.environ['targetS3Bucket']
     src_bucket_name = os.environ['sourceS3Bucket']
-
-    s3_client = boto3.client('s3')
     
     prefix = event['Input']['id']
     check_key = ''
