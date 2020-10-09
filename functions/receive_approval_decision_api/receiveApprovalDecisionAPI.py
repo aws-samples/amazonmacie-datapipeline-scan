@@ -39,14 +39,14 @@ def lambda_handler(event, context):
         print('Request denied')
 
     task_token = event['queryStringParameters']['token']
-    task_token_clean = "+".join(task_token.split())
+    task_token_clean = task_token.replace(" ", "+")
     print(f'Task Token: {task_token_clean}')
 
     try:
         print(f'Sending task success')
         response = step_function_client.send_task_success(
             taskToken = task_token_clean,
-            output = json.dumps({'action': next_action})
+            output = f'{{"action": "{next_action}"}}'
         )
     except Exception as e:
         print(f'Could not send task success with token {task_token_clean}')
