@@ -3,7 +3,5 @@ version = 0.1
 [default.deploy]
 [default.deploy.parameters]
 stack_name = "maciepipelinescan"
-s3_bucket = ""
 s3_prefix = "maciepipelinescan"
-region = "us-west-2"
 capabilities = "CAPABILITY_IAM"
