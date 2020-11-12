@@ -43,19 +43,18 @@ Parameters:
       Enter email address to receive approval requests. Check your email after 
       deployment to approve email delivery for this notification.
 
-  MacieAlreadyEnabled:
+  EnableMacie:
     Type: String
     Default: 'no'
     AllowedValues: ["yes", "no"]
     Description: >
-      Do you already have Amazon Macie enabled for your account/region 
-      [yes/no]?
+      Do you need to enable Amazon Macie [yes/no]?
 
-      If no, this template will enable Amazon Macie in your account/region 
-      as required for this proof of concept to function.
+      If no, this template will assume Amazon Macie is already enabled in your
+      account/region as required for this proof of concept to function.
 
 Conditions:
-  CreateMacieSession: !Equals [!Ref MacieAlreadyEnabled, 'no']
+  CreateMacieSession: !Equals [!Ref EnableMacie, 'yes']
 
 Resources:
   # Macie Def
@@ -198,7 +197,6 @@ Resources:
             Resource: !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:\
                 stateMachine:${StepFunctionName}"
 
-
   # S3 Buckets Def
   DataPipelineRawBucket:
     Type: AWS::S3::Bucket
@@ -208,6 +206,10 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - ExpirationInDays: 10 
+            Status: Enabled
 
   DataPipelineScanStageBucket:
     Type: AWS::S3::Bucket
@@ -217,6 +219,10 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - ExpirationInDays: 10 
+            Status: Enabled
 
   DataPipelineManualReviewBucket:
     Type: AWS::S3::Bucket
@@ -226,6 +232,10 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - ExpirationInDays: 10 
+            Status: Enabled
 
   DataPipelineScannedDataBucket:
     Type: AWS::S3::Bucket
@@ -235,6 +245,10 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - ExpirationInDays: 10 
+            Status: Enabled
 
   # SNS Topic Def
   SNSApprovalTopic:
@@ -399,6 +413,55 @@ Resources:
         - !Ref S3WriteObjectsPolicy
       Runtime: python3.6
       Timeout: 10
+
+  # Lambda CloudWatch Log Groups
+  TriggerMacieScanLog:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${TriggerMacieScan}"
+      RetentionInDays: 30
+
+  CheckMacieStatusLog:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${CheckMacieStatus}"
+      RetentionInDays: 30
+
+  DeleteManualReviewS3FilesLog:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${DeleteManualReviewS3Files}"
+      RetentionInDays: 30
+
+  GetMacieFindingsCountLog:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${GetMacieFindingsCount}"
+      RetentionInDays: 30
+
+  MoveAllScanStageS3FilesLog:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${MoveAllScanStageS3Files}"
+      RetentionInDays: 30
+
+  MoveToScannedDataS3FilesLog:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${MoveToScannedDataS3Files}"
+      RetentionInDays: 30
+
+  ReceiveApprovalDecisionAPILog:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ReceiveApprovalDecisionAPI}"
+      RetentionInDays: 30
+
+  TriggerManualApprovalLog:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${TriggerManualApproval}"
+      RetentionInDays: 30
 
   #Step Function Defs
   MaciePipelineScanStateMachine:

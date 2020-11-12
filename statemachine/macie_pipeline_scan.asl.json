@@ -49,7 +49,7 @@
               "StringEquals": "PAUSED"
             }
           ],
-          "Next": "waitOneMinute"
+          "Next": "pollForCompletionWait"
         },
         {
           "Variable": "$.jobStatus.Payload",
@@ -62,7 +62,7 @@
     "noNewKeysInRawBucket": {
       "Type": "Succeed"
     },
-    "waitOneMinute": {
+    "pollForCompletionWait": {
       "Type": "Wait",
       "Seconds": 60,
       "Next": "checkMacieStatus"
