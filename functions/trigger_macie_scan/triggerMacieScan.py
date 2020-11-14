@@ -32,7 +32,7 @@ the data ingestion pipeline.
 macie_client = boto3.client('macie2')
 s3_client = boto3.client('s3')
 paginator = s3_client.get_paginator('list_objects_v2')
-
+    
 def lambda_handler(event, context):
     print(f'REQUEST RECEIVED: {json.dumps(event, default=str)}')
 
@@ -59,38 +59,39 @@ def lambda_handler(event, context):
 
         for page in page_iterator:
             # Move objects to scan bucket
-            for key_data in page['Contents']:
-                keys_found = True
-
-                print(f"Moving object: {key_data['Key']}")
-                response = s3_client.copy_object(
-                    Bucket = scan_bucket_name,
-                    CopySource = {
-                        'Bucket': upload_bucket_name,
-                        'Key': key_data['Key']
-                    },
-                    Key = key_data['Key']
-                )
-
-                print('Deleting object')
-                response = s3_client.delete_object(
-                    Bucket=upload_bucket_name,
-                    Key = key_data['Key']
-                )
-
-                print(f"Tag object post move: {key_data['Key']}")
-                response = s3_client.put_object_tagging(
-                    Bucket = scan_bucket_name,
-                    Key = key_data['Key'],
-                    Tagging = {
-                        'TagSet': [
-                            {
-                                'Key': 'WorkflowId',
-                                'Value': prefix
-                            }
-                        ]
-                    }
-                )
+            if 'Contents' in page: 
+                for key_data in page['Contents']:
+                    keys_found = True
+    
+                    print(f"Moving object: {key_data['Key']}")
+                    response = s3_client.copy_object(
+                        Bucket = scan_bucket_name,
+                        CopySource = {
+                            'Bucket': upload_bucket_name,
+                            'Key': key_data['Key']
+                        },
+                        Key = key_data['Key']
+                    )
+    
+                    print('Deleting object')
+                    response = s3_client.delete_object(
+                        Bucket=upload_bucket_name,
+                        Key = key_data['Key']
+                    )
+    
+                    print(f"Tag object post move: {key_data['Key']}")
+                    response = s3_client.put_object_tagging(
+                        Bucket = scan_bucket_name,
+                        Key = key_data['Key'],
+                        Tagging = {
+                            'TagSet': [
+                                {
+                                    'Key': 'WorkflowId',
+                                    'Value': prefix
+                                }
+                            ]
+                        }
+                    )
     except Exception as e:
         print('Could not retrieve S3 contents')
         print(e)
