@@ -34,9 +34,7 @@ sns_client = boto3.client('sns')
 s3_client = boto3.client('s3')
 step_function_client = boto3.client('stepfunctions')
 
-def lambda_handler(event, context):
-    print(f'REQUEST RECEIVED: {json.dumps(event, default=str)}')
-    
+def lambda_handler(event, context):    
     api_allow_endpoint = os.environ['apiAllowEndpoint']
     api_deny_endpoint = os.environ['apiDenyEndpoint']
     sns_topic_arn = os.environ['snsTopicArn']
@@ -49,9 +47,7 @@ def lambda_handler(event, context):
     check_key = ''
 
     try:
-        print('Moving files with sensitive data')
         for s3_key_name in s3_key_names:
-            print(f'Tagging: {s3_key_name}')
             response = s3_client.put_object_tagging(
                 Bucket = src_bucket_name,
                 Key = s3_key_name,
@@ -68,7 +64,6 @@ def lambda_handler(event, context):
                     ]
                 }
             )
-            print(f'Moving: {s3_key_name}')
             response = s3_client.copy_object(
                 Bucket = target_bucket_name,
                 CopySource = {
@@ -77,7 +72,6 @@ def lambda_handler(event, context):
                 },
                 Key = s3_key_name
             )
-            print(f'Deleting object {s3_key_name}')
             response = s3_client.delete_object(
                 Bucket=src_bucket_name,
                 Key = s3_key_name
@@ -88,7 +82,6 @@ def lambda_handler(event, context):
         return
 
     try:
-        print('Moving files without sensitive data')
         paginator = s3_client.get_paginator('list_objects_v2')
         
         page_iterator = paginator.paginate(
@@ -100,7 +93,6 @@ def lambda_handler(event, context):
                 s3_keys_remaining = []
                 
             for s3_key_info in s3_keys_remaining:
-                print(f"Checking for tag on: {s3_key_info['Key']}")
                 object_tags = s3_client.get_object_tagging(
                     Bucket=src_bucket_name,
                     Key=s3_key_info['Key']
@@ -110,7 +102,6 @@ def lambda_handler(event, context):
                         check_key = tag_set['Value']
 
                 if check_key == prefix:
-                    print(f"Moving: {s3_key_info['Key']}")
                     response = s3_client.copy_object(
                         Bucket = target_scanned_bucket_name,
                         CopySource = {
@@ -119,7 +110,6 @@ def lambda_handler(event, context):
                         },
                         Key = s3_key_info['Key']
                     )
-                    print('Deleting object')
                     response = s3_client.delete_object(
                         Bucket=src_bucket_name,
                         Key = s3_key_info['Key']
@@ -133,7 +123,6 @@ def lambda_handler(event, context):
         return
 
     try:
-        print(f'Publishing to SNS topic for manual approval')
         response = sns_client.publish(
             TopicArn = sns_topic_arn,
             Subject = 'APPROVAL REQUIRED: Sensitive data identified in pipeline',
@@ -147,5 +136,4 @@ def lambda_handler(event, context):
         print(e)
         return
 
-    print('Execution complete...')
     return

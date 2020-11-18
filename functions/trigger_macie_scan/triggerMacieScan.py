@@ -34,8 +34,6 @@ s3_client = boto3.client('s3')
 paginator = s3_client.get_paginator('list_objects_v2')
     
 def lambda_handler(event, context):
-    print(f'REQUEST RECEIVED: {json.dumps(event, default=str)}')
-
     acct_id = os.environ['accountId']
     upload_bucket_name = os.environ['rawS3Bucket']
     scan_bucket_name = os.environ['scanS3Bucket']
@@ -44,7 +42,6 @@ def lambda_handler(event, context):
     keys_found = False
 
     try:
-        print('Getting Event id')
         prefix = event['Input']['id']
     except Exception as e:
         print('Could not retrieve Event id')
@@ -63,7 +60,6 @@ def lambda_handler(event, context):
                 for key_data in page['Contents']:
                     keys_found = True
     
-                    print(f"Moving object: {key_data['Key']}")
                     response = s3_client.copy_object(
                         Bucket = scan_bucket_name,
                         CopySource = {
@@ -73,13 +69,11 @@ def lambda_handler(event, context):
                         Key = key_data['Key']
                     )
     
-                    print('Deleting object')
                     response = s3_client.delete_object(
                         Bucket=upload_bucket_name,
                         Key = key_data['Key']
                     )
     
-                    print(f"Tag object post move: {key_data['Key']}")
                     response = s3_client.put_object_tagging(
                         Bucket = scan_bucket_name,
                         Key = key_data['Key'],
@@ -100,7 +94,6 @@ def lambda_handler(event, context):
     # Create sensitive data discovery job if upload bucket is not empty
     try:
         if keys_found == True:
-            print(f'Scanning bucket {scan_bucket_name} in account {acct_id}')
             response = macie_client.create_classification_job(
                 description = 'File upload scan',
                 initialRun = True,
@@ -133,7 +126,6 @@ def lambda_handler(event, context):
         print(e)
         return
 
-    print('Execution complete...')
     if keys_found == True:
         return response['jobId']
     else:

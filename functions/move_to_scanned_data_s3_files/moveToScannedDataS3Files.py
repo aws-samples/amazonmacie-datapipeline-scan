@@ -31,14 +31,11 @@ the data ingestion pipeline.
 s3_client = boto3.client('s3')
 
 def lambda_handler(event, context):
-    print(f'REQUEST RECEIVED: {json.dumps(event, default=str)}')
-
     target_bucket_name = os.environ['targetS3Bucket']
     src_bucket_name = os.environ['sourceS3Bucket']
     s3_key_names = event['Input']['macieFindingsInfo']['Payload']
 
     try:
-        print('Moving files')
         for s3_key_name in s3_key_names:
             response = s3_client.copy_object(
                 Bucket = target_bucket_name,
@@ -48,7 +45,6 @@ def lambda_handler(event, context):
                 },
                 Key = s3_key_name
             )
-            print('Deleting object')
             response = s3_client.delete_object(
                 Bucket=src_bucket_name,
                 Key = s3_key_name
@@ -58,6 +54,5 @@ def lambda_handler(event, context):
         print(e)
         return
 
-    print('Execution complete...')
     return 
 

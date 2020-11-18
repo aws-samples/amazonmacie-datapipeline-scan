@@ -33,15 +33,12 @@ the data ingestion pipeline.
 
 macie_client = boto3.client('macie2')
 
-def lambda_handler(event, context):
-    print(f'REQUEST RECEIVED: {json.dumps(event, default=str)}')
-    
+def lambda_handler(event, context):    
     job_id = event['Input']['jobId']['Payload']
     file_keys = set()
     return_info = []
 
     try:
-        print(f'Getting findings from Macie job ({job_id})')
         paginator = macie_client.get_paginator('list_findings')
         
         page_iterator = paginator.paginate(
@@ -59,14 +56,12 @@ def lambda_handler(event, context):
         return
 
     try:
-        print('Getting findings details')
         for page in page_iterator:
             findings_list = page['findingIds']
             findings = macie_client.get_findings(findingIds=findings_list)
             for finding in findings['findings']:
                 if 's3Object' in finding['resourcesAffected']:
                     file_keys.add(finding['resourcesAffected']['s3Object']['key'])
-                    print(finding['resourcesAffected']['s3Object']['key'])
     except Exception as e:
         print('Error reteiving findings details')
         print(e)
@@ -75,7 +70,4 @@ def lambda_handler(event, context):
     
     return_info = list(file_keys)
 
-    print(f"Return Info: {return_info}")
-
-    print('Execution complete...')
     return return_info

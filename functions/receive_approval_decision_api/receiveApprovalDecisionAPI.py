@@ -28,22 +28,16 @@ the data ingestion pipeline.
 
 step_function_client = boto3.client('stepfunctions')
 
-def lambda_handler(event, context):
-    print(f'REQUEST RECEIVED: {json.dumps(event, default=str)}')
-    
+def lambda_handler(event, context):    
     if event['requestContext']['resourcePath'] == '/allow':
         next_action = 'allow'
-        print('Request approved')
     else:
         next_action = 'delete'
-        print('Request denied')
 
     task_token = event['queryStringParameters']['token']
     task_token_clean = task_token.replace(" ", "+")
-    print(f'Task Token: {task_token_clean}')
 
     try:
-        print(f'Sending task success')
         response = step_function_client.send_task_success(
             taskToken = task_token_clean,
             output = f'{{"action": "{next_action}"}}'
@@ -53,7 +47,6 @@ def lambda_handler(event, context):
         print(e)
         return
 
-    print('Execution complete...')
     return {
         'statusCode': 200,
         'body': json.dumps({'action': next_action}),

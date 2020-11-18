@@ -32,8 +32,6 @@ the data ingestion pipeline.
 s3_client = boto3.client('s3')
     
 def lambda_handler(event, context):
-    print(f'REQUEST RECEIVED: {json.dumps(event, default=str)}')
-
     target_bucket_name = os.environ['targetS3Bucket']
     src_bucket_name = os.environ['sourceS3Bucket']
     
@@ -41,7 +39,6 @@ def lambda_handler(event, context):
     check_key = ''
 
     try:
-        print('Moving files without sensitive data')
         paginator = s3_client.get_paginator('list_objects_v2')
         
         page_iterator = paginator.paginate(
@@ -53,7 +50,6 @@ def lambda_handler(event, context):
                 s3_keys_remaining = []
                 
             for s3_key_info in s3_keys_remaining:
-                print(f"Checking for tag on: {s3_key_info['Key']}")
                 object_tags = s3_client.get_object_tagging(
                     Bucket=src_bucket_name,
                     Key=s3_key_info['Key']
@@ -62,7 +58,6 @@ def lambda_handler(event, context):
                     if tag_set['Key'] == 'WorkflowId':
                         check_key = tag_set['Value']
                 if check_key == prefix:
-                    print(f"Moving: {s3_key_info['Key']}")
                     response = s3_client.copy_object(
                         Bucket = target_bucket_name,
                         CopySource = {
@@ -71,7 +66,6 @@ def lambda_handler(event, context):
                         },
                         Key = s3_key_info['Key']
                     )
-                    print('Deleting object')
                     response = s3_client.delete_object(
                         Bucket=src_bucket_name,
                         Key = s3_key_info['Key']
@@ -85,6 +79,5 @@ def lambda_handler(event, context):
         print(e)
         return
 
-    print('Execution complete...')
     return 
 
