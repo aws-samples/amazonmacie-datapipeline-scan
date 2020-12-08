@@ -54,8 +54,8 @@ The solution architecture is shown below.
     1. If no, the Step Functions Wait state waits 60 seconds and then restarts Step 5.
 1. `getMacieFindingsCount` Lambda function counts all of the findings from the Macie sensitive data discovery job.
 1. `isSensitiveDataFound` Step Functions Choice state checks whether sensitive data was found in the Macie sensitive data discovery job.
-    11. If there was sensitive data discovered, run the `triggerManualApproval` Lambda function.
-    11. If there was no sensitive data discovered, run the `moveAllScanStageS3Files` Lambda function.
+    1. If there was sensitive data discovered, run the `triggerManualApproval` Lambda function.
+    1. If there was no sensitive data discovered, run the `moveAllScanStageS3Files` Lambda function.
 1. `moveAllScanStageS3Files` Lambda function moves all of the objects from the scan stage S3 bucket to the scanned data S3 bucket.
 1. `triggerManualApproval` Lambda function tags and moves objects with sensitive data discovered to the manual review S3 bucket, and moves objects with no sensitive data discovered to the scanned data S3 bucket. The function then sends a notification to the ApprovalRequestNotification Amazon SNS topic as a notification that manual review is required.
 1. Email is sent to the email address that’s subscribed to the `ApprovalRequestNotification` Amazon SNS topic (from the application deployment template) for the manual review user with the option to *Approve* or *Deny* pipeline ingestion for these objects.
