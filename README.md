@@ -50,20 +50,20 @@ The solution architecture is shown below.
 1. `triggerMacieScan` Lambda function creates a Macie sensitive data discovery job on the scan stage S3 bucket.
 1. `checkMacieStatus` Lambda function checks the status of the Macie sensitive data discovery job.
 1. `isMacieStatusCompleteChoice` Step Functions Choice state checks whether the Macie sensitive data discovery job is complete.
-1.1 If yes, the `getMacieFindingsCount` Lambda function runs.
-1.1 If no, the Step Functions Wait state waits 60 seconds and then restarts Step 5.
+  1.1. If yes, the `getMacieFindingsCount` Lambda function runs.
+  1.1. If no, the Step Functions Wait state waits 60 seconds and then restarts Step 5.
 1. `getMacieFindingsCount` Lambda function counts all of the findings from the Macie sensitive data discovery job.
 1. `isSensitiveDataFound` Step Functions Choice state checks whether sensitive data was found in the Macie sensitive data discovery job.
-  1.1 If there was sensitive data discovered, run the `triggerManualApproval` Lambda function.
-  1.1 If there was no sensitive data discovered, run the `moveAllScanStageS3Files` Lambda function.
+  1.1. If there was sensitive data discovered, run the `triggerManualApproval` Lambda function.
+  1.1. If there was no sensitive data discovered, run the `moveAllScanStageS3Files` Lambda function.
 1. `moveAllScanStageS3Files` Lambda function moves all of the objects from the scan stage S3 bucket to the scanned data S3 bucket.
 1. `triggerManualApproval` Lambda function tags and moves objects with sensitive data discovered to the manual review S3 bucket, and moves objects with no sensitive data discovered to the scanned data S3 bucket. The function then sends a notification to the ApprovalRequestNotification Amazon SNS topic as a notification that manual review is required.
 1. Email is sent to the email address that’s subscribed to the `ApprovalRequestNotification` Amazon SNS topic (from the application deployment template) for the manual review user with the option to *Approve* or *Deny* pipeline ingestion for these objects.
 1. Manual review user assesses the objects with sensitive data in the manual review S3 bucket and selects the **Approve** or **Deny** links in the email.
 1. The decision request is sent from the Amazon API Gateway to the `receiveApprovalDecision` Lambda function.
 1. `manualApprovalChoice` Step Functions Choice state checks the decision from the manual review user.
-  1.1 If denied, run the `deleteManualReviewS3Files` Lambda function.
-  1.1 If approved, run the `moveToScannedDataS3Files` Lambda function.
+  1.1. If denied, run the `deleteManualReviewS3Files` Lambda function.
+  1.1. If approved, run the `moveToScannedDataS3Files` Lambda function.
 1. `deleteManualReviewS3Files` Lambda function deletes the objects from the manual review S3 bucket.
 1. `moveToScannedDataS3Files` Lambda function moves the objects from the manual review S3 bucket to the scanned data S3 bucket.
 1. The next step of the automated data pipeline will begin with the objects in the scanned data S3 bucket.
