@@ -17,7 +17,7 @@ Typically, customers will perform validate and clean their data before moving it
 1. Processing – Responsible for transforming data into a consumable state through data validation, cleanup, normalization, transformation, and enrichment. This processing layer is where the additional validation steps are added to identify instances of sensitive data that haven’t been appropriately redacted or tokenized prior to consumption.
 1. **Consumption** – Responsible for providing tools to gain insights from the data in the data lake.
 
-![Data pipeline with sensitive data scan](https://github.com/aws-samples/amazonmacie-datapipeline-scan/blob/master/images/macie-data-pipeline.png)
+![Data pipeline with sensitive data scan](https://github.com/aws-samples/amazonmacie-datapipeline-scan/blob/master/images/pipeline-overview.png)
 
 The application runs on a scheduled basis (four times a day, every 6 hours by default) to process data that is added to the raw data S3 bucket. You can customize the application to perform a sensitive data discovery scan during any stage of the pipeline. Because most customers do their extract, transform, and load (ETL) daily, the application scans for sensitive data on a scheduled basis before any crawler jobs run to catalog the data and after typical validation and data redaction or tokenization processes complete.
 
